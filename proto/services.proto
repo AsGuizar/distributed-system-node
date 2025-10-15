@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package distributed;
+
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+message Status {
+  bool success = 1;
+  string message = 2;
+}
+
+message Empty {}
+
+// USUARIO
+service UsuarioService {
+  rpc Autenticar(AuthRequest) returns (AuthResponse);
+  rpc ObtenerToken(TokenRequest) returns (TokenResponse);
+  rpc VerificarToken(TokenRequest) returns (Status);
+}
+
+message AuthRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message AuthResponse {
+  bool success = 1;
+  string user_id = 2;
+}
+
+message TokenRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message TokenResponse {
+  string token = 1;
+  int64 expires_at = 2;
+}
+
+// ARCHIVO
+service ArchivoService {
+  rpc SubirArchivo(stream UploadRequest) returns (UploadResponse);
+  rpc DescargarArchivo(DownloadRequest) returns (stream DownloadResponse);
+  rpc EliminarArchivo(DeleteRequest) returns (Status);
+  rpc ListarArchivos(ListRequest) returns (ListResponse);
+}
+
+message UploadRequest {
+  oneof data {
+    UploadMetadata metadata = 1;
+    bytes chunk = 2;
+  }
+}
+
+message UploadMetadata {
+  string filename = 1;
+  string token = 2;
+  int64 total_size = 3;
+}
+
+message UploadResponse {
+  string file_id = 1;
+  string checksum = 2;
+}
+
+message DownloadRequest {
+  string file_id = 1;
+  string token = 2;
+}
+
+message DownloadResponse {
+  oneof data {
+    FileMetadata metadata = 1;
+    bytes chunk = 2;
+  }
+}
+
+message FileMetadata {
+  string file_id = 1;
+  string filename = 2;
+  int64 size = 3;
+  string owner = 4;
+  string checksum = 5;
+  Timestamp created_at = 6;
+  repeated string replica_nodes = 7;
+}
+
+message DeleteRequest {
+  string file_id = 1;
+  string token = 2;
+}
+
+message ListRequest {
+  string token = 1;
+  int32 limit = 2;
+}
+
+message ListResponse {
+  repeated FileMetadata files = 1;
+}
+
+// NODO
+service NodoService {
+  rpc ObtenerEstado(Empty) returns (NodeStatus);
+  rpc SincronizarArchivo(SyncRequest) returns (Status);
+  rpc EstaDisponible(Empty) returns (Status);
+}
+
+message NodeStatus {
+  string node_id = 1;
+  string address = 2;
+  int32 port = 3;
+  bool disponible = 4;
+  int64 archivos_almacenados = 5;
+  int64 espacio_usado = 6;
+  int64 ultimo_heartbeat = 7;
+}
+
+message SyncRequest {
+  string file_id = 1;
+  bytes data = 2;
+  string checksum = 3;
+}
+
+// AUDITOR
+service AuditorService {
+  rpc RegistrarEvento(EventRequest) returns (Status);
+  rpc ConsultarEventos(FilterEvento) returns (EventosResponse);
+}
+
+message EventRequest {
+  EventoAuditoria event = 1;
+}
+
+message EventoAuditoria {
+  string event_id = 1;
+  Timestamp timestamp = 2;
+  string usuario = 3;
+  string accion = 4;
+  string recurso = 5;
+  string resultado = 6;
+}
+
+message FilterEvento {
+  string usuario = 1;
+  int64 desde = 2;
+  int64 hasta = 3;
+  int32 limite = 4;
+}
+
+message EventosResponse {
+  repeated EventoAuditoria eventos = 1;
+}
+
+// SEGURIDAD
+service SeguridadService {
+  rpc ValidarToken(TokenRequest) returns (TokenValidation);
+  rpc VerificarPermiso(PermisoRequest) returns (Status);
+}
+
+message TokenValidation {
+  bool valido = 1;
+  string usuario = 2;
+  int64 expira_en = 3;
+}
+
+message PermisoRequest {
+  string token = 1;
+  string recurso = 2;
+  string accion = 3;
+}
+
+// BALANCEADOR
+service BalanceadorService {
+  rpc ObtenerNodoDisponible(NodoRequest) returns (NodeResponse);
+  rpc RegistrarNodo(NodoRegistro) returns (Status);
+  rpc ObtenerMetricas(Empty) returns (Metricas);
+}
+
+message NodoRequest {
+  string operacion = 1;
+}
+
+message NodeResponse {
+  string node_id = 1;
+  string address = 2;
+  int32 port = 3;
+}
+
+message NodoRegistro {
+  string node_id = 1;
+  string address = 2;
+  int32 port = 3;
+  int64 capacidad = 4;
+}
+
+message Metricas {
+  int32 nodos_activos = 1;
+  int64 archivos_total = 2;
+  int64 espacio_usado = 3;
+  repeated NodeStatus nodos = 4;
+}

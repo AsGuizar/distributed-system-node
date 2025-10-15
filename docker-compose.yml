@@ -1,0 +1,145 @@
+version: '3.8'
+
+networks:
+  dist-net:
+    driver: bridge
+
+volumes:
+  db-security:
+  db-node1:
+  db-node2:
+
+services:
+  postgres-security:
+    image: postgres:15-alpine
+    container_name: postgres-security
+    environment:
+      POSTGRES_DB: dist_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    volumes:
+      - db-security:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - dist-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  security-hub:
+    build: .
+    container_name: security-hub
+    environment:
+      SERVICE_TYPE: SECURITY
+      SERVICE_PORT: 50051
+      DB_HOST: postgres-security
+      DB_PORT: 5432
+      DB_NAME: dist_db
+      DB_USER: admin
+      DB_PASSWORD: admin123
+      JWT_SECRET: super-secret-key-change-me
+      NODE_ENV: production
+    ports:
+      - "50051:50051"
+    networks:
+      - dist-net
+    depends_on:
+      postgres-security:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres-node1:
+    image: postgres:15-alpine
+    container_name: postgres-node1
+    environment:
+      POSTGRES_DB: dist_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    volumes:
+      - db-node1:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - dist-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  storage-node-1:
+    build: .
+    container_name: storage-node-1
+    environment:
+      SERVICE_TYPE: STORAGE
+      NODE_ID: node-1
+      SERVICE_PORT: 50052
+      DB_HOST: postgres-node1
+      DB_PORT: 5432
+      DB_NAME: dist_db
+      DB_USER: admin
+      DB_PASSWORD: admin123
+      STORAGE_PATH: /storage
+      BALANCEADOR_HOST: security-hub
+      BALANCEADOR_PORT: 50051
+      NODE_ENV: production
+    ports:
+      - "50052:50052"
+    networks:
+      - dist-net
+    depends_on:
+      postgres-node1:
+        condition: service_healthy
+      security-hub:
+        condition: service_started
+    volumes:
+      - ./storage-1:/storage
+    restart: unless-stopped
+
+  postgres-node2:
+    image: postgres:15-alpine
+    container_name: postgres-node2
+    environment:
+      POSTGRES_DB: dist_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    volumes:
+      - db-node2:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - dist-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  storage-node-2:
+    build: .
+    container_name: storage-node-2
+    environment:
+      SERVICE_TYPE: STORAGE
+      NODE_ID: node-2
+      SERVICE_PORT: 50053
+      DB_HOST: postgres-node2
+      DB_PORT: 5432
+      DB_NAME: dist_db
+      DB_USER: admin
+      DB_PASSWORD: admin123
+      STORAGE_PATH: /storage
+      BALANCEADOR_HOST: security-hub
+      BALANCEADOR_PORT: 50051
+      NODE_ENV: production
+    ports:
+      - "50053:50053"
+    networks:
+      - dist-net
+    depends_on:
+      postgres-node2:
+        condition: service_healthy
+      security-hub:
+        condition: service_started
+    volumes:
+      - ./storage-2:/storage
+    restart: unless-stopped
