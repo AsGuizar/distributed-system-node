@@ -24,21 +24,23 @@ const packageDefinition = protoLoader.loadSync(protoPath, {
 const proto = grpc.loadPackageDefinition(packageDefinition);
 
 const startServer = () => {
-  const server = new grpc.Server();
-  
-  try {
-    if (config.SERVICE_TYPE === 'SECURITY') {
-      server.addService(proto.distributed.usuario.UsuarioService.service, usuarioService);
-      server.addService(proto.distributed.seguridad.SeguridadService.service, seguridadService);
-      server.addService(proto.distributed.auditor.AuditorService.service, auditorService);
-      server.addService(proto.distributed.balanceador.BalanceadorService.service, balanceadorService);
-      logger.info('Security Hub started');
-    } else if (config.SERVICE_TYPE === 'STORAGE') {
-      server.addService(proto.distributed.nodo.NodoService.service, nodoService);
-      server.addService(proto.distributed.archivo.ArchivoService.service, archivoService);
-      server.addService(proto.distributed.auditor.AuditorService.service, auditorService);
-      logger.info('Storage Node started');
-    }
+    const server = new grpc.Server();
+    
+    try {
+      if (config.SERVICE_TYPE === 'SECURITY') {
+        // FIX: Access services directly under 'proto.distributed'
+        server.addService(proto.distributed.UsuarioService.service, usuarioService);
+        server.addService(proto.distributed.SeguridadService.service, seguridadService);
+        server.addService(proto.distributed.AuditorService.service, auditorService);
+        server.addService(proto.distributed.BalanceadorService.service, balanceadorService);
+        logger.info('Security Hub started');
+      } else if (config.SERVICE_TYPE === 'STORAGE') {
+        // FIX: Access services directly under 'proto.distributed'
+        server.addService(proto.distributed.NodoService.service, nodoService);
+        server.addService(proto.distributed.ArchivoService.service, archivoService);
+        server.addService(proto.distributed.AuditorService.service, auditorService);
+        logger.info('Storage Node started');
+      }
     
     const address = `0.0.0.0:${config.SERVICE_PORT}`;
     server.bindAsync(address, grpc.ServerCredentials.createInsecure(), (err, port) => {
