@@ -1,4 +1,4 @@
-const pool = require('./pool');
+const pool = require('./pool.js');
 
 // User queries
 const getUserByUsername = async (username) => {

@@ -8,14 +8,14 @@
     "dev": "nodemon src/index.js"
   },
   "keywords": ["distributed", "grpc", "nodejs"],
-  "author": "Your Name",
+  "author": "Angel",
   "license": "MIT",
   "dependencies": {
     "@grpc/grpc-js": "^1.9.7",
     "@grpc/proto-loader": "^0.7.9",
     "pg": "^8.11.3",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.1.2",
+    "jsonwebtoken": "^9.0.0",
     "dotenv": "^16.3.1",
     "winston": "^3.11.0",
     "uuid": "^9.0.1"
